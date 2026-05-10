@@ -2,19 +2,16 @@ require('dotenv').config();
 const express   = require('express');
 const mongoose  = require('mongoose');
 const path      = require('path');
+const fs        = require('fs'); // Добавили fs для проверок
 const rateLimit = require('express-rate-limit');
 
 const app = express();
 
 // ==========================================
-// 1. ИСПРАВЛЕНИЕ ДЛЯ RENDER.COM (TRUST PROXY)
-// Указываем Express доверять прокси-серверу Render
+// 1. TRUST PROXY (ДЛЯ RENDER)
 // ==========================================
 app.set('trust proxy', 1);
 
-// ==========================================
-// RATE LIMITERS
-// ==========================================
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 300,
@@ -27,26 +24,24 @@ const uploadLimiter = rateLimit({
     message: { error: 'Upload limit reached' }
 });
 
-// Увеличил лимиты для загрузки, чтобы точно хватало
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ==========================================
-// 2. ИСПРАВЛЕНИЕ ДЛЯ CSS И СТАТИКИ
+// 2. СТАТИКА (PUBLIC)
 // ==========================================
-app.use('/public', express.static(path.join(__dirname, 'public'), {
-    // Явно указываем, что отдаем файлы с правильными типами
+const publicPath = path.join(__dirname, 'public');
+console.log('Static public path:', publicPath);
+
+app.use('/public', express.static(publicPath, {
     setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.css')) {
-            res.setHeader('Content-Type', 'text/css');
-        } else if (filePath.endsWith('.js')) {
-            res.setHeader('Content-Type', 'application/javascript');
-        }
+        if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
+        else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
     }
 }));
 
 // ==========================================
-// ROUTES
+// ROUTES (API)
 // ==========================================
 app.use('/api/auth',    apiLimiter,    require('./routes/auth'));
 app.use('/api/users',   apiLimiter,    require('./routes/users'));
@@ -57,20 +52,34 @@ app.use('/api/thumb',   require('./routes/thumb'));
 app.use('/api/avatar',  require('./routes/avatar'));
 
 // ==========================================
-// PAGES
+// PAGES (HTML)
 // ==========================================
-app.get('/',       (_, res) => res.sendFile(path.join(__dirname, 'pages', 'index.html')));
-app.get('/video',  (_, res) => res.sendFile(path.join(__dirname, 'pages', 'video.html')));
-app.get('/upload', (_, res) => res.sendFile(path.join(__dirname, 'pages', 'upload.html')));
-app.get('/profile/:id?', (_, res) => res.sendFile(path.join(__dirname, 'pages', 'profile.html')));
+const pagesPath = path.join(__dirname, 'pages');
+console.log('HTML pages path:', pagesPath);
 
-// 404 Fallback
+// Функция-хелпер для надежной отдачи HTML
+const sendPage = (res, filename) => {
+    const filePath = path.join(pagesPath, filename);
+    if (fs.existsSync(filePath)) {
+        res.sendFile(filePath);
+    } else {
+        console.error(`[404 ERROR] File not found: ${filePath}`);
+        res.status(404).send(`Error: Cannot find file ${filename} inside /pages directory.`);
+    }
+};
+
+app.get('/',       (_, res) => sendPage(res, 'index.html'));
+app.get('/video',  (_, res) => sendPage(res, 'video.html'));
+app.get('/upload', (_, res) => sendPage(res, 'upload.html'));
+app.get('/profile/:id?', (_, res) => sendPage(res, 'profile.html'));
+
+// 404 Fallback для API
 app.use((req, res) => {
-    res.status(404).json({ error: 'Route not found' });
+    res.status(404).json({ error: `Route not found: ${req.url}` });
 });
 
 // ==========================================
-// START
+// START SERVER
 // ==========================================
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => {
