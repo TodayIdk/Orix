@@ -2,7 +2,7 @@ require('dotenv').config();
 const express   = require('express');
 const mongoose  = require('mongoose');
 const path      = require('path');
-const fs        = require('fs'); // Добавили fs для проверок
+const fs        = require('fs');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -28,17 +28,29 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // ==========================================
-// 2. СТАТИКА (PUBLIC)
+// 2. ПУЛЕНЕПРОБИВАЕМАЯ СТАТИКА (PUBLIC)
+// Этот код вручную находит файлы и ставит MIME-типы
 // ==========================================
 const publicPath = path.join(__dirname, 'public');
-console.log('Static public path:', publicPath);
 
-app.use('/public', express.static(publicPath, {
-    setHeaders: (res, filePath) => {
+app.use('/public', (req, res) => {
+    // req.path здесь это то, что идет после /public (например: /css/main.css)
+    const filePath = path.join(publicPath, req.path);
+
+    if (fs.existsSync(filePath)) {
+        // Жестко задаем MIME-типы, чтобы браузер не ругался
         if (filePath.endsWith('.css')) res.setHeader('Content-Type', 'text/css');
         else if (filePath.endsWith('.js')) res.setHeader('Content-Type', 'application/javascript');
+        else if (filePath.endsWith('.svg')) res.setHeader('Content-Type', 'image/svg+xml');
+        else if (filePath.endsWith('.png')) res.setHeader('Content-Type', 'image/png');
+        else if (filePath.endsWith('.jpg') || filePath.endsWith('.jpeg')) res.setHeader('Content-Type', 'image/jpeg');
+
+        res.sendFile(filePath);
+    } else {
+        // Если файла реально нет, отдаем простой текст, а не JSON
+        res.status(404).type('text/plain').send(`[STATIC ERROR] File not found exactly here: ${filePath}`);
     }
-}));
+});
 
 // ==========================================
 // ROUTES (API)
@@ -55,16 +67,14 @@ app.use('/api/avatar',  require('./routes/avatar'));
 // PAGES (HTML)
 // ==========================================
 const pagesPath = path.join(__dirname, 'pages');
-console.log('HTML pages path:', pagesPath);
 
-// Функция-хелпер для надежной отдачи HTML
 const sendPage = (res, filename) => {
     const filePath = path.join(pagesPath, filename);
     if (fs.existsSync(filePath)) {
+        res.setHeader('Content-Type', 'text/html');
         res.sendFile(filePath);
     } else {
-        console.error(`[404 ERROR] File not found: ${filePath}`);
-        res.status(404).send(`Error: Cannot find file ${filename} inside /pages directory.`);
+        res.status(404).type('text/plain').send(`[PAGE ERROR] HTML file not found exactly here: ${filePath}`);
     }
 };
 
@@ -73,9 +83,9 @@ app.get('/video',  (_, res) => sendPage(res, 'video.html'));
 app.get('/upload', (_, res) => sendPage(res, 'upload.html'));
 app.get('/profile/:id?', (_, res) => sendPage(res, 'profile.html'));
 
-// 404 Fallback для API
+// 404 Fallback для API-запросов
 app.use((req, res) => {
-    res.status(404).json({ error: `Route not found: ${req.url}` });
+    res.status(404).json({ error: `API Route not found: ${req.url}` });
 });
 
 // ==========================================
