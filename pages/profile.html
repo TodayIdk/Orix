@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orix</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/400.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/500.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@fontsource/geist-sans@5.0.1/600.css" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/public/css/main.css">
+    <style>
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 32px;
+            padding: 40px 0;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+        .profile-avatar-wrapper {
+            position: relative;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: var(--bg-secondary);
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .profile-avatar-wrapper img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar-edit-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            opacity: 0;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .profile-avatar-wrapper:hover .avatar-edit-overlay.active { opacity: 1; }
+        
+        .profile-info {
+            flex-grow: 1;
+        }
+        .profile-info h1 { 
+            font-size: 32px; 
+            margin-bottom: 8px; 
+            letter-spacing: -0.02em;
+        }
+        .profile-stats { 
+            color: var(--text-secondary); 
+            font-size: 15px; 
+            margin-bottom: 16px;
+        }
+        
+        /* Стили кнопки подписки */
+        .subscribe-btn {
+            padding: 10px 20px;
+            background: var(--text-primary);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: var(--radius-pill);
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+            display: inline-block;
+        }
+        .subscribe-btn:hover {
+            opacity: 0.9;
+        }
+        .subscribe-btn.subscribed {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="logo-container" onclick="window.location.href='/'" style="cursor:pointer;">
+        <img src="/public/logo.svg" alt="Orix" class="logo-icon"> orix
+    </div>
+    <div style="flex:1;"></div>
+    <div class="profile-btn" onclick="window.location.href='/profile'" title="My Profile">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+        </svg>
+    </div>
+</header>
+
+<div class="app-layout" style="padding-top: 72px;">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="nav-item" onclick="window.location.href='/'">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+            Home
+        </div>
+        <div class="nav-item" onclick="window.location.href='/upload'">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Upload
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <div id="profileLoading" class="loading-spinner"><div class="spinner"></div></div>
+        
+        <div id="profileContent" style="display:none;">
+            
+            <!-- ШАПКА ПРОФИЛЯ -->
+            <div class="profile-header">
+                <div class="profile-avatar-wrapper">
+                    <img id="profileAvatar" src="" alt="Avatar">
+                    <div class="avatar-edit-overlay" id="avatarEditOverlay">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.17 3.23a2 2 0 0 0-2.83 0L3 18.5V21h2.5l15.34-15.34a2 2 0 0 0 0-2.83z"/></svg>
+                    </div>
+                </div>
+                
+                <div class="profile-info">
+                    <h1 id="profileName">Username</h1>
+                    <div class="profile-stats">
+                        <span id="profileSubscribers" style="font-weight:600; color:var(--text-primary);">0 subscribers</span> • 
+                        <span id="profileVideos">0 videos</span> • 
+                        <span id="profileViews">0 views</span>
+                    </div>
+                    <!-- Кнопка Подписки -->
+                    <button class="subscribe-btn" id="profileSubscribeBtn" style="display:none;">Subscribe</button>
+                </div>
+                
+                <input type="file" id="avatarInput" accept="image/*" style="display:none;">
+            </div>
+
+            <!-- СПИСОК ВИДЕО -->
+            <h2 style="margin-bottom:20px; font-size: 20px;">Uploaded Videos</h2>
+            <div class="video-grid" id="profileGrid"></div>
+        </div>
+    </main>
+</div>
+
+<script src="/public/js/main.js"></script>
+<script>
+    const urlParts = window.location.pathname.split('/');
+    let targetUserId = urlParts[urlParts.length - 1] !== 'profile' ? urlParts[urlParts.length - 1] : null;
+
+    if (!targetUserId) {
+        const u = Auth.getUser();
+        if (u) { 
+            targetUserId = u.id; 
+            window.history.replaceState(null, '', `/profile/${u.id}`); 
+        } else { 
+            alert('Please sign in to view your profile.'); 
+            window.location.href = '/'; 
+        }
+    }
+
+    async function loadProfile() {
+        try {
+            const res = await fetch(`/api/users/${targetUserId}`);
+            const data = await res.json();
+            
+            if(!res.ok) throw new Error(data.error);
+
+            document.getElementById('profileLoading').style.display = 'none';
+            document.getElementById('profileContent').style.display = 'block';
+
+            document.title = `${data.user.username} — Orix`;
+            document.getElementById('profileName').textContent = data.user.username;
+            
+            // Статистика
+            const subCount = data.user.subscribers?.length || 0;
+            document.getElementById('profileSubscribers').textContent = `${subCount} subscribers`;
+            document.getElementById('profileVideos').textContent = `${data.stats.totalVideos} videos`;
+            document.getElementById('profileViews').textContent = `${formatViews(data.stats.totalViews)} views`;
+
+            // Аватарка
+            const avatarImg = document.getElementById('profileAvatar');
+            if (data.user.avatar) {
+                avatarImg.src = `/api/avatar/${data.user.avatar}`;
+            } else {
+                avatarImg.src = `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="%23262626"><rect width="100" height="100"/><text x="50" y="65" font-size="50" fill="%23fff" text-anchor="middle" font-family="sans-serif">${data.user.username[0].toUpperCase()}</text></svg>`;
+            }
+
+            const myUser = Auth.getUser();
+            const subBtn = document.getElementById('profileSubscribeBtn');
+
+            // Логика кнопки подписки
+            if (myUser && myUser.id !== data.user.id) {
+                // Чужой профиль - показываем кнопку
+                subBtn.style.display = 'inline-block';
+                if (data.user.subscribers?.includes(myUser.id)) {
+                    subBtn.classList.add('subscribed');
+                    subBtn.textContent = 'Subscribed';
+                }
+            } else if (!myUser) {
+                // Не авторизован - тоже показываем (при клике попросим войти)
+                subBtn.style.display = 'inline-block';
+            } else if (myUser && myUser.id === data.user.id) {
+                // Свой профиль - разрешаем менять аватарку, кнопку подписки прячем
+                const overlay = document.getElementById('avatarEditOverlay');
+                overlay.classList.add('active');
+                overlay.onclick = () => document.getElementById('avatarInput').click();
+            }
+
+            // Рендер видео
+            const grid = document.getElementById('profileGrid');
+            if (data.videos.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-secondary)">No videos uploaded yet.</p>';
+            } else {
+                data.videos.forEach(v => {
+                    v.uploaderName = data.user.username; 
+                    v.uploader = { _id: data.user.id, avatar: data.user.avatar };
+                    grid.appendChild(renderVideoCard(v));
+                });
+            }
+        } catch(e) {
+            document.querySelector('.main-content').innerHTML = `<h3>Profile not found</h3>`;
+        }
+    }
+
+    // Обработчик нажатия на кнопку "Подписаться" в профиле
+    document.getElementById('profileSubscribeBtn').addEventListener('click', async () => {
+        if (!Auth.isLoggedIn()) {
+            return alert('Please sign in to subscribe to this channel.');
+        }
+
+        const btn = document.getElementById('profileSubscribeBtn');
+        const res = await fetch(`/api/users/${targetUserId}/subscribe`, {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${Auth.getToken()}` }
+        });
+
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('profileSubscribers').textContent = `${data.subscribersCount} subscribers`;
+            
+            if (data.subscribed) {
+                btn.classList.add('subscribed');
+                btn.textContent = 'Subscribed';
+            } else {
+                btn.classList.remove('subscribed');
+                btn.textContent = 'Subscribe';
+            }
+        }
+    });
+
+    // Обработчик смены аватарки
+    document.getElementById('avatarInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        const fd = new FormData();
+        fd.append('avatar', file);
+        
+        try {
+            const res = await fetch('/api/users/avatar', {
+                method: 'POST',
+                headers: { Authorization: `Bearer ${Auth.getToken()}` },
+                body: fd
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // Обновляем данные в localStorage
+                const u = Auth.getUser();
+                u.avatar = data.avatarId;
+                Auth.setSession(Auth.getToken(), u);
+                window.location.reload(); // Перезагружаем, чтобы показать новую аву
+            } else {
+                alert(data.error);
+            }
+        } catch(e) { 
+            alert('Upload failed'); 
+        }
+    });
+
+    loadProfile();
+</script>
+</body>
+</html>
